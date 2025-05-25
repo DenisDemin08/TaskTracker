@@ -1,48 +1,47 @@
 ﻿using TaskTracker.Domain.Entities;
-using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Services.Contracts;
-using TaskTracker.Storage;
-using System.Linq;
-using System.Threading.Tasks;
+using TaskTracker.Domain.Services.Contracts.Repositories;
 
 namespace TaskTracker.Domain.Services.UseCases
 {
-    public class AccessControlService : IAccessControlService
+    /// <summary>
+    /// Сервис контроля доступа к ресурсам системы
+    /// </summary>
+    public class AccessControlService(IUnitOfWork unitOfWork) : IAccessControlService
     {
-        private readonly TaskTrackerRepository _repository;
-
-        public AccessControlService(TaskTrackerRepository repository)
-        {
-            _repository = repository;
-        }
-
+        /// <inheritdoc/>
         public async Task<bool> ValidateProjectAccessAsync(int userId, int projectId)
         {
-            var project = await _repository.GetProjectByIdAsync(projectId);
+            var project = await unitOfWork.Projects.GetByIdAsync(projectId);
             if (project == null) return false;
 
-            if (project.AdministratorId == userId)
-                return true;
-
-            var projectTeams = await _repository.GetProjectTeamsAsync(project);
-            return projectTeams.Any(t => t.ManagerId == userId);
+            return project.AdministratorId == userId ||
+                   await IsUserInProjectTeamAsync(userId, projectId);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> ValidateTaskOwnershipAsync(int userId, int taskId)
         {
-            var task = await _repository.GetTaskByIdAsync(taskId);
-            if (task == null) return false;
-
-            return task.CreatorId == userId
-                || (task.AssigneeId.HasValue && task.AssigneeId.Value == userId);
+            var task = await unitOfWork.Tasks.GetByIdAsync(taskId);
+            return task != null && (task.CreatorId == userId || task.AssigneeId == userId);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> IsTeamManagerAsync(int userId, int teamId)
-        { 
-            var manager = new Manager { UserId = userId };
-            var managedTeams = await _repository.GetManagerTeamsAsync(manager);
+        {
+            var team = await unitOfWork.Teams.GetByIdAsync(teamId);
+            return team != null && team.ManagerId == userId;
+        }
 
-            return managedTeams.Any(t => t.TeamId == teamId);
+        private async Task<bool> IsUserInProjectTeamAsync(int userId, int projectId)
+        {
+            var teams = await unitOfWork.Teams.GetTeamsByProjectAsync(projectId);
+            foreach (var team in teams)
+            {
+                var employees = await unitOfWork.Employees.GetByTeamIdAsync(team.TeamId);
+                if (employees.Any(e => e.EmployeeId == userId)) return true;
+            }
+            return false;
         }
     }
 }

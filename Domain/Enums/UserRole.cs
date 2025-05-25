@@ -4,6 +4,6 @@
     {
         Administrator,
         Manager,
-        TeamMember
+        Employee
     }
 }

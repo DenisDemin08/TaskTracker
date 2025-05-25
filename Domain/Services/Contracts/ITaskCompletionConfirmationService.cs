@@ -1,36 +1,41 @@
-﻿using TaskTracker.Domain.ValueObject;
-using TaskTracker.Domain.Entities;
+﻿using TaskTracker.Domain.Entities;
+using TaskTracker.Domain.ValueObject;
 
 namespace TaskTracker.Domain.Services.Contracts
 {
+    /// <summary>
+    /// Сервис подтверждения выполнения задач
+    /// </summary>
     public interface ITaskCompletionConfirmationService
     {
-        public interface ITaskCompletionConfirmation
-        {
-            /// <summary>
-            /// Запросить подтверждение выполнения задачи
-            /// </summary>
-            Task RequestConfirmationAsync(int taskId, TeamMember requester);
+        /// <summary>
+        /// Запрос подтверждения выполнения задачи
+        /// </summary>
+        /// <param name="taskId">Идентификатор задачи</param>
+        /// <param name="requester">Сотрудник-инициатор запроса</param>
+        Task RequestConfirmationAsync(int taskId, Employees requester);
 
-            /// <summary>
-            /// Подтвердить выполнение задачи
-            /// </summary>
-            Task ConfirmTaskCompletionAsync(int taskId, Manager confirmer, string? comment);
+        /// <summary>
+        /// Подтверждение выполнения задачи
+        /// </summary>
+        /// <param name="taskId">Идентификатор задачи</param>
+        /// <param name="confirmer">Подтверждающий менеджер</param>
+        /// <param name="comment">Комментарий подтверждения</param>
+        Task ConfirmTaskCompletionAsync(int taskId, Managers confirmer, string? comment);
 
-            /// <summary>
-            /// Отклонить подтверждение выполнения задачи
-            /// </summary>
-            Task RejectTaskCompletionAsync(int taskId, Manager reviewer, string reason);
+        /// <summary>
+        /// Отклонение выполнения задачи
+        /// </summary>
+        /// <param name="taskId">Идентификатор задачи</param>
+        /// <param name="reviewer">Менеджер-рецензент</param>
+        /// <param name="reason">Причина отклонения</param>
+        Task RejectTaskCompletionAsync(int taskId, Managers reviewer, string reason);
 
-            /// <summary>
-            /// Получить список задач, ожидающих подтверждения
-            /// </summary>
-            Task<List<TaskConfirmationDto>> GetPendingConfirmationsAsync(int taskId);
-
-            /// <summary>
-            /// Получить историю подтверждений для задачи
-            /// </summary>
-            Task<List<ConfirmationRecord>> GetConfirmationHistoryAsync(int taskId);
-        }
+        /// <summary>
+        /// Получение списка ожидающих подтверждения задач
+        /// </summary>
+        /// <param name="managerId">Идентификатор менеджера</param>
+        /// <returns>Список задач на подтверждение</returns>
+        Task<List<TaskConfirmationDto>> GetPendingConfirmationsAsync(int managerId);
     }
 }

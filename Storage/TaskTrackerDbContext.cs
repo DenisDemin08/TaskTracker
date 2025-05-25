@@ -4,104 +4,90 @@ using TaskTracker.Domain.Enums;
 
 namespace TaskTracker.Storage
 {
-    public class TaskTrackerDbContext : DbContext
+    public class TaskTrackerdbContext(DbContextOptions<TaskTrackerdbContext> options) : DbContext(options)
     {
-        public DbSet<User> Users { get; set; }
-        public DbSet<Administrator> Administrators { get; set; }
-        public DbSet<Manager> Managers { get; set; }
-        public DbSet<TeamMember> TeamMembers { get; set; }
-        public DbSet<Project> Projects { get; set; }
-        public DbSet<Team> Teams { get; set; }
-        public DbSet<Tasks> Tasks { get; set; } 
-
-        public TaskTrackerDbContext(DbContextOptions<TaskTrackerDbContext> options) : base(options) { }
+        public DbSet<Users> Users { get; set; }
+        public DbSet<Administrators> Administrators { get; set; }
+        public DbSet<Managers> Managers { get; set; }
+        public DbSet<Employees> Employees { get; set; }
+        public DbSet<Projects> Projects { get; set; }
+        public DbSet<Tasks> Tasks { get; set; }
+        public DbSet<Teams> Teams { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-
-            modelBuilder.Entity<User>().ToTable("User");
-            modelBuilder.Entity<Administrator>().ToTable("Administrator");
-            modelBuilder.Entity<Manager>().ToTable("Manager");
-            modelBuilder.Entity<TeamMember>().ToTable("TeamMember");
-
-
-            modelBuilder.Entity<User>(entity =>
+            modelBuilder.Entity<Users>(entity =>
             {
-                entity.HasIndex(u => u.Email).IsUnique();
-                entity.Property(u => u.Email).IsRequired().HasMaxLength(255);
-                entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(255);
-                entity.Property(u => u.FullName).IsRequired().HasMaxLength(100);
-            });
+                entity.ToTable("Users");
+                entity.HasKey(u => u.UserId);
 
-
-            modelBuilder.Entity<Team>(entity =>
-            {
-                entity.Property(t => t.Name).IsRequired().HasMaxLength(100);
-                entity.HasIndex(t => t.Name).IsUnique();
-
-            entity.HasOne<Project>()
-            .WithMany()
-            .HasForeignKey(t => t.Project)
-            .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne<Manager>()
-                    .WithMany()
-                    .HasForeignKey(t => t.ManagerId)
-                    .OnDelete(DeleteBehavior.SetNull);
-            });
-
-
-            modelBuilder.Entity<Project>(entity =>
-            {
-                entity.Property(p => p.Name).IsRequired().HasMaxLength(200);
-
-                entity.HasOne<Administrator>()
-                    .WithMany()
-                    .HasForeignKey(p => p.AdministratorId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
-
-
-            modelBuilder.Entity<Tasks>(entity =>
-            {
-                entity.Property(t => t.Title).IsRequired().HasMaxLength(200);
-                entity.Property(t => t.TaskStatus)
+                entity.Property(u => u.Role)
                     .HasConversion<string>()
-                    .HasMaxLength(50);
+                    .HasMaxLength(20);
+            });
 
-                entity.Property(t => t.TaskPriority)
-                    .HasConversion<string>()
-                    .HasMaxLength(10);
+            modelBuilder.Entity<Administrators>(entity =>
+            {
+                entity.ToTable("Administrators");
+                entity.HasKey(a => a.AdminId);
 
-                entity.HasOne<Administrator>()
-                    .WithMany()
-                    .HasForeignKey(t => t.CreatorId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne<TeamMember>()
-                    .WithMany()
-                    .HasForeignKey(t => t.AssigneeId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne<Project>()
-                    .WithMany()
-                    .HasForeignKey(t => t.ProjectId)
+                entity.HasOne(a => a.User)
+                    .WithOne()
+                    .HasForeignKey<Administrators>(a => a.AdminId)
+                    .HasPrincipalKey<Users>(u => u.UserId)
+                    .IsRequired()
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-
-            modelBuilder.Entity<TeamMember>(entity =>
+            modelBuilder.Entity<Managers>(entity =>
             {
-                entity.Property(tm => tm.Position)
+                entity.ToTable("Managers");
+                entity.HasKey(m => m.ManagerId);
+
+                entity.HasOne(m => m.User)
+                    .WithOne()
+                    .HasForeignKey<Managers>(m => m.ManagerId)
+                    .HasPrincipalKey<Users>(u => u.UserId)
+                    .IsRequired()
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Employees>(entity =>
+            {
+                entity.ToTable("Employees");
+                entity.HasKey(e => e.EmployeeId);
+
+                entity.Property(e => e.Position)
                     .HasConversion<string>()
                     .HasMaxLength(50);
 
-                entity.HasOne<Team>()
-                    .WithMany()
-                    .HasForeignKey(tm => tm.TeamId)
-                    .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(e => e.User)
+                    .WithOne()
+                    .HasForeignKey<Employees>(e => e.EmployeeId)
+                    .HasPrincipalKey<Users>(u => u.UserId)
+                    .IsRequired()
+                    .OnDelete(DeleteBehavior.Cascade);
             });
+
+            modelBuilder.Entity<Projects>(entity =>
+            {
+                entity.ToTable("Projects");
+                entity.HasKey(p => p.ProjectId);
+            });
+
+            modelBuilder.Entity<Teams>(entity =>
+            {
+                entity.ToTable("Teams");
+                entity.HasKey(t => t.TeamId);
+            });
+
+            modelBuilder.Entity<Tasks>(entity =>
+            {
+                entity.ToTable("Tasks");
+                entity.HasKey(t => t.TaskId);
+            });
+
+            base.OnModelCreating(modelBuilder);
         }
     }
 }
