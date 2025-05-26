@@ -18,7 +18,6 @@ namespace TaskTracker
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Настройка CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -54,6 +53,7 @@ namespace TaskTracker
                         Email = "support@tasktracker.com"
                     }
                 });
+                c.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {

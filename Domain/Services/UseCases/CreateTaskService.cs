@@ -1,43 +1,58 @@
 ﻿using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Services.Contracts;
 using TaskTracker.Domain.Services.Contracts.Repositories;
+using TaskTracker.Storage.Repository;
 
 namespace TaskTracker.Domain.Services.UseCases
 {
     /// <summary>
-    /// Сервис создания задач
+    /// Сервис для создания задач и управления ответственными
     /// </summary>
-    public class CreateTaskService(
-        IUnitOfWork unitOfWork,
-        IAccessControlService accessControl) : ICreateTaskService
+    /// <remarks>
+    /// Инициализирует новый экземпляр сервиса
+    /// </remarks>
+    /// <param name="unitOfWork">Единица работы для взаимодействия с хранилищем</param>
+    public class CreateTaskService(IUnitOfWork unitOfWork) : ICreateTaskService
     {
-        /// <inheritdoc/>
+
+        /// <summary>
+        /// Создает новую задачу в системе
+        /// </summary>
+        /// <param name="task">Данные задачи для создания</param>
+        /// <param name="initiator">Администратор-инициатор создания</param>
+        /// <returns>Созданная задача</returns>
         public async Task<Tasks> CreateTaskAsync(Tasks task, Administrators initiator)
         {
-            if (!await accessControl.ValidateProjectAccessAsync(initiator.AdminId, task.ProjectId))
-                throw new UnauthorizedAccessException("Нет доступа к проекту");
-
-            task.CreatorId = initiator.AdminId;
             await unitOfWork.Tasks.AddAsync(task);
             await unitOfWork.SaveChangesAsync();
             return task;
         }
 
-        /// <inheritdoc/>
-        public async Task AssignResponsibleAsync(int taskId, Administrators admin)
+        /// <summary>
+        /// Назначает ответственного сотрудника для задачи
+        /// </summary>
+        /// <param name="taskId">Идентификатор задачи</param>
+        /// <param name="admin">Администратор, выполняющий назначение</param>
+        /// <param name="employeeId">Идентификатор назначаемого сотрудника</param>
+        /// <exception cref="KeyNotFoundException">
+        /// Выбрасывается если задача или сотрудник не найдены
+        /// </exception>
+        public async Task AssignResponsibleAsync(int taskId, Administrators admin, int employeeId)
         {
             var task = await unitOfWork.Tasks.GetByIdAsync(taskId);
-                if (task != null)
+            if (task != null)
             {
-                if (!await accessControl.ValidateProjectAccessAsync(admin.AdminId, task.ProjectId))
-                    throw new UnauthorizedAccessException("Нет доступа к проекту");
-
-                task.AssigneeId = admin.AdminId;
-                await unitOfWork.Tasks.UpdateAsync(task);
-                await unitOfWork.SaveChangesAsync();
+                var employee = await unitOfWork.Employees.GetByIdAsync(employeeId);
+                if (employee != null)
+                {
+                    task.AssigneeId = employeeId;
+                    await unitOfWork.SaveChangesAsync();
+                }
+                else
+                    throw new KeyNotFoundException("Сотрудник не найден");
             }
             else
-                throw new ArgumentException("Задача не найдена");
+                throw new KeyNotFoundException("Задача не найдена");
         }
     }
 }

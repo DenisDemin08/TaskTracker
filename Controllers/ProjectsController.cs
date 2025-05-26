@@ -4,6 +4,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel.DataAnnotations;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Services.Contracts;
+using TaskTracker.Domain.ValueObject;
 using TaskTracker.Domain.Services.Contracts.Repositories;
 using TaskTracker.Domain.ValueObject.Project;
 
@@ -165,33 +166,6 @@ namespace TaskTracker.Controllers
         [Required] string Description,
         [Required] DateOnly StartDate,
         [Required] DateOnly EndDate);
-
-    public record ProjectStatusUpdateDto(DateOnly? EndDate);
-
-    public record ProjectListItemDto(
-        int ProjectId,
-        string Name,
-        DateOnly StartDate,
-        DateOnly? EndDate)
-    {
-        public ProjectListItemDto(Projects project) : this(
-            project.ProjectId,
-            project.Name ?? string.Empty,
-            project.StartDate,
-            project.EndDate)
-        {
-        }
-    }
-
-    public class ProjectDetailsDto
-    {
-        public string Name { get; set; } = null!;
-        public string Description { get; set; } = null!;
-        public DateOnly StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
-        public IEnumerable<Task> Tasks { get; set; } = [];
-        public IEnumerable<Teams> Teams { get; set; } = [];
-    }
 
     #endregion
 }

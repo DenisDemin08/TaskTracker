@@ -16,10 +16,11 @@ namespace TaskTracker.Domain.Services.Contracts
         Task<Tasks> CreateTaskAsync(Tasks task, Administrators initiator);
 
         /// <summary>
-        /// Назначение ответственного за задачу
+        /// Назначить ответственного сотрудника
         /// </summary>
-        /// <param name="taskId">Идентификатор задачи</param>
-        /// <param name="admin">Ответственный администратор</param>
-        Task AssignResponsibleAsync(int taskId, Administrators admin);
+        /// <param name="admin"> администратора</param>
+        /// <param name="taskId">ID задачи</param>
+        /// <param name="employeeId">ID назначаемого сотрудника</param>
+        Task AssignResponsibleAsync(int taskId, Administrators admin, int employeeId);
     }
 }

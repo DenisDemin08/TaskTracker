@@ -1,5 +1,4 @@
-﻿// TaskCompletionConfirmationService.cs
-using TaskTracker.Domain.Entities;
+﻿using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
 using TaskTracker.Domain.Services.Contracts;
 using TaskTracker.Domain.Services.Contracts.Repositories;
@@ -8,67 +7,59 @@ using TaskTracker.Domain.ValueObject;
 namespace TaskTracker.Domain.Services.UseCases
 {
     /// <summary>
-    /// Сервис подтверждения выполнения задач
+    /// Сервис управления подтверждением выполнения задач
     /// </summary>
     public class TaskCompletionConfirmationService(
         IUnitOfWork unitOfWork,
         IAccessControlService accessControl) : ITaskCompletionConfirmationService
     {
-        /// <inheritdoc/>
         public async Task RequestConfirmationAsync(int taskId, Employees requester)
         {
             var task = await unitOfWork.Tasks.GetByIdAsync(taskId)
-                ?? throw new KeyNotFoundException("Задача не найдена");
+                ?? throw new KeyNotFoundException("Task not found");
 
             if (!await accessControl.ValidateTaskOwnershipAsync(requester.User.UserId, taskId))
-                throw new UnauthorizedAccessException("Нет доступа к задаче");
+                throw new UnauthorizedAccessException("Access denied");
 
-            task.TaskStatus = Enums.TaskStatus.PendingConfirmation;
+            task.TaskStatus = Domain.Enums.TaskStatus.PendingConfirmation;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
 
-        /// <inheritdoc/>
         public async Task ConfirmTaskCompletionAsync(int taskId, Managers confirmer, string? comment)
         {
             var task = await unitOfWork.Tasks.GetByIdAsync(taskId)
-                ?? throw new KeyNotFoundException("Задача не найдена");
+                ?? throw new KeyNotFoundException("Task not found");
 
             var project = await unitOfWork.Projects.GetByIdAsync(task.ProjectId)
-                ?? throw new KeyNotFoundException("Проект не найден");
+                ?? throw new KeyNotFoundException("Project not found");
 
             var teams = await unitOfWork.Teams.GetTeamsByProjectAsync(project.ProjectId);
-            var isManager = teams?.Any(t => t.ManagerId == confirmer.ManagerId) ?? false;
+            if (teams?.Any(t => t.ManagerId == confirmer.ManagerId) != true)
+                throw new UnauthorizedAccessException("Manager rights required");
 
-            if (!isManager)
-                throw new UnauthorizedAccessException("Требуются права менеджера команды");
-
-            task.TaskStatus = Enums.TaskStatus.Completed;
+            task.TaskStatus = Domain.Enums.TaskStatus.Completed;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
 
-        /// <inheritdoc/>
         public async Task RejectTaskCompletionAsync(int taskId, Managers reviewer, string reason)
         {
             var task = await unitOfWork.Tasks.GetByIdAsync(taskId)
-                ?? throw new KeyNotFoundException("Задача не найдена");
+                ?? throw new KeyNotFoundException("Task not found");
 
             var project = await unitOfWork.Projects.GetByIdAsync(task.ProjectId)
-                ?? throw new KeyNotFoundException("Проект не найден");
+                ?? throw new KeyNotFoundException("Project not found");
 
             var teams = await unitOfWork.Teams.GetTeamsByProjectAsync(project.ProjectId);
-            var isManager = teams?.Any(t => t.ManagerId == reviewer.ManagerId) ?? false;
+            if (teams?.Any(t => t.ManagerId == reviewer.ManagerId) != true)
+                throw new UnauthorizedAccessException("Manager rights required");
 
-            if (!isManager)
-                throw new UnauthorizedAccessException("Требуются права менеджера команды");
-
-            task.TaskStatus = Enums.TaskStatus.NeedsRevision;
+            task.TaskStatus = Domain.Enums.TaskStatus.NeedsRevision;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
 
-        /// <inheritdoc/>
         public async Task<List<TaskConfirmationDto>> GetPendingConfirmationsAsync(int managerId)
         {
             var teams = await unitOfWork.Teams.GetTeamsByManagerAsync(managerId);
@@ -76,14 +67,13 @@ namespace TaskTracker.Domain.Services.UseCases
 
             var allTasks = await unitOfWork.Tasks.GetAllAsync();
             var pendingTasks = allTasks?
-                .Where(t => t.TaskStatus == Enums.TaskStatus.PendingConfirmation)
+                .Where(t => t.TaskStatus == Domain.Enums.TaskStatus.PendingConfirmation)
                 .ToList() ?? [];
 
             var result = new List<TaskConfirmationDto>();
 
             foreach (var task in pendingTasks)
             {
-
                 var project = await unitOfWork.Projects.GetByIdAsync(task.ProjectId);
                 if (project == null) continue;
 
@@ -96,8 +86,8 @@ namespace TaskTracker.Domain.Services.UseCases
                 result.Add(new TaskConfirmationDto
                 {
                     Status = task.TaskStatus.ToString(),
-                    RequesterName = creator?.FullName ?? "Неизвестный",
-                    ConfirmerName = confirmer?.FullName ?? "Менеджер команды",
+                    RequesterName = creator?.FullName ?? "Unknown",
+                    ConfirmerName = confirmer?.FullName ?? "Team Manager",
                     RequestDate = DateTime.UtcNow,
                     Comment = null,
                     Reason = null

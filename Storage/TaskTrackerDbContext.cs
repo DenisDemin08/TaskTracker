@@ -86,13 +86,28 @@ namespace TaskTracker.Storage
                 entity.ToTable("Tasks");
                 entity.HasKey(t => t.TaskId);
 
+                entity.HasOne<Projects>()
+           .WithMany()
+           .HasForeignKey(t => t.ProjectId)
+           .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Users>()
+                    .WithMany()
+                    .HasForeignKey(t => t.CreatorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Employees>()
+                    .WithMany()
+                    .HasForeignKey(t => t.AssigneeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.Property(t => t.TaskPriority)
-                .HasConversion<string>()
-                .IsRequired();
+                    .HasConversion<string>()
+                    .IsRequired();
 
                 entity.Property(t => t.TaskStatus)
-                .HasConversion<string>() 
-                .IsRequired();
+                    .HasConversion<string>()
+                    .IsRequired();
             });
 
             base.OnModelCreating(modelBuilder);

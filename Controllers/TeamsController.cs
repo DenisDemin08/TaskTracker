@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Enums;
+using TaskTracker.Domain.ValueObject;
 using TaskTracker.Domain.Services.Contracts;
 using TaskTracker.Domain.Services.Contracts.Repositories;
 
@@ -112,7 +113,8 @@ namespace TaskTracker.Controllers
             try
             {
                 await teamManageService.AddMemberAsync(teamId, memberId);
-                return NoContent();
+                // Возвращаем teamId в ответе
+                return Ok(new { teamId, message = "Пользователь успешно добавлен в команду" });
             }
             catch (KeyNotFoundException ex)
             {
@@ -207,8 +209,4 @@ namespace TaskTracker.Controllers
             });
         }
     }
-
-    public record TeamCreateDto(string Name, int? ProjectId);
-    public record TeamUpdateDto(string Name, int? ProjectId);
-    public record TeamResponseDto(int TeamId, string Name, int? ProjectId);
 }
