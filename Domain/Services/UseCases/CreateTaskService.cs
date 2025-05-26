@@ -26,15 +26,18 @@ namespace TaskTracker.Domain.Services.UseCases
         /// <inheritdoc/>
         public async Task AssignResponsibleAsync(int taskId, Administrators admin)
         {
-            var task = await unitOfWork.Tasks.GetByIdAsync(taskId)
-                ?? throw new ArgumentException("Задача не найдена");
+            var task = await unitOfWork.Tasks.GetByIdAsync(taskId);
+                if (task != null)
+            {
+                if (!await accessControl.ValidateProjectAccessAsync(admin.AdminId, task.ProjectId))
+                    throw new UnauthorizedAccessException("Нет доступа к проекту");
 
-            if (!await accessControl.ValidateProjectAccessAsync(admin.AdminId, task.ProjectId))
-                throw new UnauthorizedAccessException("Нет доступа к проекту");
-
-            task.AssigneeId = admin.AdminId;
-            await unitOfWork.Tasks.UpdateAsync(task);
-            await unitOfWork.SaveChangesAsync();
+                task.AssigneeId = admin.AdminId;
+                await unitOfWork.Tasks.UpdateAsync(task);
+                await unitOfWork.SaveChangesAsync();
+            }
+            else
+                throw new ArgumentException("Задача не найдена");
         }
     }
 }

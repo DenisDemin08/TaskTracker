@@ -20,7 +20,7 @@ namespace TaskTracker.Storage.Repository
         /// <inheritdoc/>
         public async Task<List<Tasks>> GetHighPriorityTasksAsync()
             => await _dbSet
-                .Where(t => t.TasksPriority == TasksPriority.High)
+                .Where(t => t.TaskPriority == TaskPriority.High)
                 .ToListAsync();
 
         /// <inheritdoc/>

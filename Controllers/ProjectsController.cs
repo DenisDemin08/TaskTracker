@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using System.ComponentModel.DataAnnotations;
 using TaskTracker.Domain.Entities;
 using TaskTracker.Domain.Services.Contracts;
 using TaskTracker.Domain.Services.Contracts.Repositories;
@@ -11,6 +14,7 @@ namespace TaskTracker.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class ProjectsController(
         IProjectManageService projectManageService,
         IViewProjectsService viewProjectsService,
@@ -20,19 +24,18 @@ namespace TaskTracker.Controllers
         /// Создать новый проект
         /// </summary>
         [HttpPost("{administratorId}")]
-        public async Task<IActionResult> CreateProject(int administratorId, [FromBody] ProjectCreateDto projectDto)
+        [SwaggerOperation(OperationId = "CreateProject")]
+        [ProducesResponseType(typeof(Projects), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateProject(
+            int administratorId,
+            [FromBody] ProjectCreateDto projectDto)
         {
             try
             {
                 var admin = await unitOfWork.Administrator.GetByIdAsync(administratorId);
                 if (admin == null)
-                {
-                    return BadRequest(new
-                    {
-                        error = "Admin Not Found",
-                        message = "Указанный администратор не существует"
-                    });
-                }
+                    return BadRequest(new ErrorResponse("Администратор не найден"));
 
                 var project = new Projects
                 {
@@ -50,13 +53,9 @@ namespace TaskTracker.Controllers
                     createdProject
                 );
             }
-            catch (ArgumentException ex)
+            catch (ValidationException ex)
             {
-                return BadRequest(new
-                {
-                    error = "Validation Error",
-                    message = ex.Message
-                });
+                return BadRequest(new ErrorResponse(ex.Message));
             }
         }
 
@@ -64,115 +63,135 @@ namespace TaskTracker.Controllers
         /// Получить список всех проектов
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllProjects()
+        [SwaggerOperation(OperationId = "GetAllProjects")]
+        [ProducesResponseType(typeof(IEnumerable<ProjectListItemDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllProjects([FromQuery] DateOnly? startDateFrom = null)
         {
             var projects = await viewProjectsService.GetAllProjectsAsync();
-            return Ok(projects);
+
+            if (startDateFrom.HasValue)
+                projects = [.. projects.Where(p => p.StartDate >= startDateFrom.Value)];
+
+            return Ok(projects.Select(p => new ProjectListItemDto(p)));
         }
 
         /// <summary>
         /// Получить детальную информацию о проекте
         /// </summary>
         [HttpGet("{id}")]
+        [SwaggerOperation(OperationId = "GetProjectDetails")]
+        [ProducesResponseType(typeof(ProjectDetailsDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetProjectDetails(int id)
         {
-            try
-            {
-                var projectDetails = await viewProjectsService.GetProjectDetailsAsync(id);
-                return projectDetails == null
-                    ? NotFound(new { error = "Not Found", message = "Проект не найден" })
-                    : Ok(projectDetails);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new
-                {
-                    error = "Invalid Request",
-                    message = ex.Message
-                });
-            }
+            var projectDetails = await viewProjectsService.GetProjectDetailsAsync(id);
+            return projectDetails == null
+                ? NotFound(new ErrorResponse("Проект не найден"))
+                : Ok(projectDetails);
         }
 
         /// <summary>
-        /// Обновить статус проекта
+        /// Обновить дату завершения проекта
         /// </summary>
         [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateProjectStatus(int id, [FromBody] ProjectStatusUpdateDto statusDto)
+        [SwaggerOperation(OperationId = "UpdateProjectStatus")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProjectStatus(
+            int id,
+            [FromBody] ProjectStatusUpdateDto statusDto)
         {
-            try
-            {
-                var project = await unitOfWork.Projects.GetByIdAsync(id);
-                if (project == null)
-                {
-                    return NotFound(new
-                    {
-                        error = "Project Not Found",
-                        message = "Проект не найден"
-                    });
-                }
+            var project = await unitOfWork.Projects.GetByIdAsync(id);
+            if (project == null)
+                return NotFound(new ErrorResponse("Проект не найден"));
 
-                project.EndDate = statusDto.EndDate;
-                await unitOfWork.Projects.UpdateAsync(project);
-                await unitOfWork.SaveChangesAsync();
+            project.EndDate = statusDto.EndDate;
+            await unitOfWork.Projects.UpdateAsync(project);
+            await unitOfWork.SaveChangesAsync();
 
-                return NoContent();
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new
-                {
-                    error = "Validation Error",
-                    message = ex.Message
-                });
-            }
+            return NoContent();
         }
 
         /// <summary>
         /// Назначить команду на проект
         /// </summary>
         [HttpPost("{id}/teams")]
-        public async Task<IActionResult> AssignTeamToProject(int id, [FromBody] int teamId)
+        [SwaggerOperation(OperationId = "AssignTeamToProject")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AssignTeamToProject(
+            int id,
+            [FromBody] int teamId)
         {
-            try
-            {
-                var team = await unitOfWork.Teams.GetByIdAsync(teamId);
-                if (team == null)
-                {
-                    return NotFound(new
-                    {
-                        error = "Team Not Found",
-                        message = "Команда не найдена"
-                    });
-                }
+            var team = await unitOfWork.Teams.GetByIdAsync(teamId);
+            if (team == null)
+                return NotFound(new ErrorResponse("Команда не найдена"));
 
-                team.ProjectId = id;
-                await unitOfWork.Teams.UpdateAsync(team);
-                await unitOfWork.SaveChangesAsync();
+            team.ProjectId = id;
+            await unitOfWork.Teams.UpdateAsync(team);
+            await unitOfWork.SaveChangesAsync();
 
-                return NoContent();
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new
-                {
-                    error = "Invalid Request",
-                    message = ex.Message
-                });
-            }
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Получить задачи проекта
+        /// </summary>
+        [HttpGet("{id}/tasks")]
+        [SwaggerOperation(OperationId = "GetProjectTasks")]
+        [ProducesResponseType(typeof(IEnumerable<Task>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetProjectTasks(int id)
+        {
+            var tasks = await unitOfWork.Tasks.GetTasksByProjectAsync(id);
+            return Ok(tasks);
+        }
+
+        /// <summary>
+        /// Получить команды проекта
+        /// </summary>
+        [HttpGet("{id}/teams")]
+        [SwaggerOperation(OperationId = "GetProjectTeams")]
+        [ProducesResponseType(typeof(IEnumerable<Teams>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetProjectTeams(int id)
+        {
+            var teams = await unitOfWork.Teams.GetTeamsByProjectAsync(id);
+            return Ok(teams);
         }
     }
 
-    /// <summary>
-    /// DTO для создания проекта
-    /// </summary>
+    #region DTO Definitions
     public record ProjectCreateDto(
-        string Name,
-        string Description,
-        DateOnly StartDate,
-        DateOnly EndDate);
+        [Required] string Name,
+        [Required] string Description,
+        [Required] DateOnly StartDate,
+        [Required] DateOnly EndDate);
 
-    /// <summary>
-    /// DTO для обновления статуса проекта
-    /// </summary>
     public record ProjectStatusUpdateDto(DateOnly? EndDate);
+
+    public record ProjectListItemDto(
+        int ProjectId,
+        string Name,
+        DateOnly StartDate,
+        DateOnly? EndDate)
+    {
+        public ProjectListItemDto(Projects project) : this(
+            project.ProjectId,
+            project.Name ?? string.Empty,
+            project.StartDate,
+            project.EndDate)
+        {
+        }
+    }
+
+    public class ProjectDetailsDto
+    {
+        public string Name { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public DateOnly StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+        public IEnumerable<Task> Tasks { get; set; } = [];
+        public IEnumerable<Teams> Teams { get; set; } = [];
+    }
+
+    #endregion
 }

@@ -85,6 +85,14 @@ namespace TaskTracker.Storage
             {
                 entity.ToTable("Tasks");
                 entity.HasKey(t => t.TaskId);
+
+                entity.Property(t => t.TaskPriority)
+                .HasConversion<string>()
+                .IsRequired();
+
+                entity.Property(t => t.TaskStatus)
+                .HasConversion<string>() 
+                .IsRequired();
             });
 
             base.OnModelCreating(modelBuilder);

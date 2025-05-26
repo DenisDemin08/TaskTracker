@@ -20,6 +20,6 @@ namespace TaskTracker.Domain.Services.Contracts
         /// </summary>
         /// <param name="taskId">Идентификатор задачи</param>
         /// <param name="status">Новый статус задачи</param>
-        Task UpdateTaskStatusAsync(int taskId, TasksStatus status);
+        Task UpdateTaskStatusAsync(int taskId, Enums.TaskStatus status);
     }
 }

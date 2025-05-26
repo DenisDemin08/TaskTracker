@@ -21,10 +21,10 @@ namespace TaskTracker.Domain.Entities
         public string? TaskDescription { get; set; }
 
         /// <summary>Текущий статус задачи</summary>
-        public TasksStatus TasksStatus { get; set; }
+        public Enums.TaskStatus TaskStatus { get; set; }
 
         /// <summary>Приоритет задачи</summary>
-        public TasksPriority TasksPriority { get; set; }
+        public TaskPriority TaskPriority { get; set; }
 
         /// <summary>Крайний срок выполнения</summary>
         public DateOnly Deadline { get; set; }

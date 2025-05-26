@@ -21,7 +21,7 @@ namespace TaskTracker.Domain.Services.UseCases
                 if (!await accessControl.ValidateProjectAccessAsync(confirmator.AdminId, task.ProjectId))
                     throw new UnauthorizedAccessException("Доступ запрещен");
 
-                task.TasksStatus = TasksStatus.Completed;
+                task.TaskStatus = Enums.TaskStatus.Completed;
                 await unitOfWork.Tasks.UpdateAsync(task);
                 await unitOfWork.SaveChangesAsync();
             }
@@ -30,12 +30,12 @@ namespace TaskTracker.Domain.Services.UseCases
         }
 
         /// <inheritdoc/>
-        public async Task UpdateTaskStatusAsync(int taskId, TasksStatus status)
+        public async Task UpdateTaskStatusAsync(int taskId, Enums.TaskStatus status)
         {
             var task = await unitOfWork.Tasks.GetByIdAsync(taskId);
                 if (task != null)
             {
-                task.TasksStatus = status;
+                task.TaskStatus = status;
                 await unitOfWork.Tasks.UpdateAsync(task);
                 await unitOfWork.SaveChangesAsync();
             }

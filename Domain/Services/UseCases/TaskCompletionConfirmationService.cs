@@ -23,7 +23,7 @@ namespace TaskTracker.Domain.Services.UseCases
             if (!await accessControl.ValidateTaskOwnershipAsync(requester.User.UserId, taskId))
                 throw new UnauthorizedAccessException("Нет доступа к задаче");
 
-            task.TasksStatus = TasksStatus.PendingConfirmation;
+            task.TaskStatus = Enums.TaskStatus.PendingConfirmation;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
@@ -43,7 +43,7 @@ namespace TaskTracker.Domain.Services.UseCases
             if (!isManager)
                 throw new UnauthorizedAccessException("Требуются права менеджера команды");
 
-            task.TasksStatus = TasksStatus.Completed;
+            task.TaskStatus = Enums.TaskStatus.Completed;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
@@ -63,7 +63,7 @@ namespace TaskTracker.Domain.Services.UseCases
             if (!isManager)
                 throw new UnauthorizedAccessException("Требуются права менеджера команды");
 
-            task.TasksStatus = TasksStatus.NeedsRevision;
+            task.TaskStatus = Enums.TaskStatus.NeedsRevision;
             await unitOfWork.Tasks.UpdateAsync(task);
             await unitOfWork.SaveChangesAsync();
         }
@@ -76,7 +76,7 @@ namespace TaskTracker.Domain.Services.UseCases
 
             var allTasks = await unitOfWork.Tasks.GetAllAsync();
             var pendingTasks = allTasks?
-                .Where(t => t.TasksStatus == TasksStatus.PendingConfirmation)
+                .Where(t => t.TaskStatus == Enums.TaskStatus.PendingConfirmation)
                 .ToList() ?? [];
 
             var result = new List<TaskConfirmationDto>();
@@ -95,7 +95,7 @@ namespace TaskTracker.Domain.Services.UseCases
 
                 result.Add(new TaskConfirmationDto
                 {
-                    Status = task.TasksStatus.ToString(),
+                    Status = task.TaskStatus.ToString(),
                     RequesterName = creator?.FullName ?? "Неизвестный",
                     ConfirmerName = confirmer?.FullName ?? "Менеджер команды",
                     RequestDate = DateTime.UtcNow,

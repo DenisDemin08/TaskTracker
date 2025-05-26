@@ -28,7 +28,7 @@ namespace TaskTracker.Controllers
 
         #region Операции администратора
         /// <summary>
-        /// Создать задачу (автоматическая установка creatorId = adminId)
+        /// Создать задачу
         /// </summary>
         [HttpPost("{adminId}")]
         public async Task<ObjectResult> CreateTask(
@@ -48,8 +48,8 @@ namespace TaskTracker.Controllers
                 {
                     Title = request.Title,
                     TaskDescription = request.TaskDescription,
-                    TasksStatus = TasksStatus.New,
-                    TasksPriority = request.TasksPriority,
+                    TaskStatus = Domain.Enums.TaskStatus.New,
+                    TaskPriority = request.TaskPriority,
                     Deadline = request.Deadline,
                     CreatorId = adminId,
                     ProjectId = request.ProjectId
@@ -203,7 +203,7 @@ namespace TaskTracker.Controllers
         {
             public required string Title { get; set; }
             public string? TaskDescription { get; set; }
-            public TasksPriority TasksPriority { get; set; }
+            public TaskPriority TaskPriority { get; set; }
             public DateOnly Deadline { get; set; }
             public int ProjectId { get; set; }
         }
